@@ -1,0 +1,71 @@
+version: '3.3'
+services:
+
+  tyk-dashboard:
+    image: tykio/tyk-dashboard:latest
+    ports:
+      - "3000:3000"
+      - "5000:5000"
+    networks:
+      - tyk
+    volumes:
+      - /tyk/analytics/tyk_analytics.conf:/opt/tyk-dashboard/tyk_analytics.conf
+    deploy:
+      mode: replicated
+      replicas: 2
+
+  tyk-gateway:
+    image: tykio/tyk-gateway:latest
+    ports:
+      - "8080:8080"
+    networks:
+      - tyk
+    volumes:
+      - /tyk/gateway/tyk.conf:/opt/tyk-gateway/tyk.conf
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+        constraints:
+        - node.role != manager
+
+  tyk-pump:
+    image: tykio/tyk-pump-docker-pub:latest
+    networks:
+      - tyk
+    volumes:
+      - /tyk/pump/pump.conf:/opt/tyk-pump/pump.conf
+    deploy:
+      mode: replicated
+      replicas: 2
+
+  tyk-redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - /tyk/redis:/data
+    networks:
+      - tyk
+    deploy:
+      placement:
+        constraints:
+        - node.role == manager
+
+  tyk-mongo:
+    image: mongo:3.2
+    command: ["mongod", "--smallfiles"]
+    ports:
+      - "27017:27017"
+    volumes:
+      - /tyk/mongo:/data/db
+    networks:
+      - tyk
+    deploy:
+      placement:
+        constraints:
+        - node.role == manager
+
+networks:
+  tyk:
+    external: true
